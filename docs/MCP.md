@@ -23,6 +23,13 @@ npm run mcp
 
 The MCP server writes protocol frames to stdout. Diagnostic/fatal messages go to stderr.
 
+Before wiring a client, the isolated MCP package can be checked with:
+
+```bash
+npm --prefix mcp run check
+npm --prefix mcp test
+```
+
 ## Tools
 
 ### Read-only
@@ -33,9 +40,10 @@ The MCP server writes protocol frames to stdout. Diagnostic/fatal messages go to
 - `career_get_applications` — `data/applications.md`
 - `career_get_portals` — `portals.yml`
 - `career_list_reports` — list recent Markdown evaluation reports
+- `career_get_report` — read one report returned by `career_list_reports`
 - `career_doctor` — run the canonical `doctor.mjs`
 
-Large Markdown files are bounded before being returned to the MCP client. Pipeline and application reads keep the newest tail when truncation is required.
+Large Markdown files are bounded before being returned to the MCP client. Pipeline and application reads keep the newest tail when truncation is required. Report reads accept only a single `.md` filename from the `reports/` directory; path traversal is rejected.
 
 ### Mutating / active
 
@@ -43,6 +51,7 @@ Large Markdown files are bounded before being returned to the MCP client. Pipeli
   - defaults to `--dry-run`
   - set `write=true` to let Career-Ops update pipeline/history files
   - supports company filtering, verification, date bounds and blacklist controls
+  - enabling `rediscover_404` also enables URL verification, matching the scanner's own contract
 - `career_set_status` — invokes the canonical `set-status.mjs --json`
   - accepts exactly one selector: tracker row, report number, or company
   - state validation, ambiguity checks, tracker locking and atomic writes remain owned by `set-status.mjs`
@@ -60,6 +69,8 @@ scan.mjs
 set-status.mjs
 doctor.mjs
 ```
+
+The MCP tests pin the command allowlist, string-only argv contract, canonical file allowlist, report filename validation and path-traversal rejection.
 
 Add future MCP operations by exposing a dedicated tool and explicitly adding its canonical Career-Ops script to the allowlist.
 
@@ -87,7 +98,7 @@ docker compose -f docker-compose.mcp.yml up -d --build
 docker compose -f docker-compose.mcp.yml logs -f career-ops-mcp
 ```
 
-The compose stack persists writable Career-Ops state through `./data`. Profile, CV and portal configuration are mounted read-only. The tunnel health/admin listener is bound to `127.0.0.1:8080` on the Docker host.
+The compose stack persists writable Career-Ops state through `./data`. Profile, CV, reports and portal configuration are mounted read-only. The tunnel health/admin listener is bound to `127.0.0.1:8080` on the Docker host.
 
 ## Notes about Playwright verification in Docker
 
