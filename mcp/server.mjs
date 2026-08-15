@@ -4,7 +4,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import * as z from 'zod/v4';
 
-import { readCareerFile, listReports } from './lib/files.mjs';
+import { listReports, readCareerFile, readReport } from './lib/files.mjs';
 import { runCareerScript } from './lib/runner.mjs';
 
 const server = new McpServer({
@@ -67,6 +67,29 @@ server.registerTool(
 );
 
 server.registerTool(
+  'career_get_report',
+  {
+    description: 'Read one Markdown evaluation report returned by career_list_reports.',
+    inputSchema: z.object({
+      name: z.string().min(1),
+      max_chars: z.number().int().min(1_000).max(500_000).optional(),
+    }),
+  },
+  async ({ name, max_chars }) => {
+    try {
+      const result = readReport(name, { maxChars: max_chars });
+      if (!result.exists) return errorResult(`${result.path} does not exist.`);
+      const suffix = result.truncated
+        ? `\n\n[MCP truncated ${result.path} to ${result.text.length}/${result.totalChars} characters.]`
+        : '';
+      return textResult(result.text + suffix);
+    } catch (error) {
+      return errorResult(error.message);
+    }
+  },
+);
+
+server.registerTool(
   'career_scan',
   {
     description: 'Run the deterministic Career-Ops job scanner. By default this is a dry-run; set write=true to let scan.mjs update its canonical pipeline/history files.',
@@ -86,7 +109,7 @@ server.registerTool(
     const args = ['--quiet'];
     if (!input.write) args.push('--dry-run');
     if (input.company) args.push('--company', input.company);
-    if (input.verify) args.push('--verify');
+    if (input.verify || input.rediscover_404) args.push('--verify');
     if (input.since_days !== undefined) args.push('--since', String(input.since_days));
     if (input.posted_after) args.push('--posted-after', input.posted_after);
     if (input.posted_before) args.push('--posted-before', input.posted_before);
