@@ -1,0 +1,21 @@
+services:
+  career-ops-mcp:
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile.tunnel
+    restart: unless-stopped
+    environment:
+      CONTROL_PLANE_API_KEY: ${CONTROL_PLANE_API_KEY}
+      CONTROL_PLANE_TUNNEL_ID: ${CONTROL_PLANE_TUNNEL_ID}
+      MCP_COMMAND: node /app/mcp/server.mjs
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      HEALTH_LISTEN_ADDR: ":8080"
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./reports:/app/reports:ro
+      - ./cv.md:/app/cv.md:ro
+      - ./portals.yml:/app/portals.yml:ro
+    ports:
+      - "127.0.0.1:8080:8080"
